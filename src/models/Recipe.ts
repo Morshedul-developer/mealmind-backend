@@ -35,7 +35,10 @@ const recipeSchema = new Schema<IRecipe>(
       enum: ["Easy", "Medium", "Hard"],
       required: true,
     },
-    imageUrl: { type: String, required: true },
+    imageUrl: {
+      type: String,
+      default: "https://placehold.co/600x400?text=Recipe+Image",
+    },
     images: { type: [String], default: [] },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     ratingAverage: { type: Number, default: 0 },

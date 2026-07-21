@@ -1,5 +1,6 @@
-import { Response } from "express";
+import { Response, NextFunction } from "express";
 import { z } from "zod";
+import mongoose from "mongoose";
 import { Recipe } from "../models/Recipe";
 import { AuthedRequest } from "../middleware/auth.middleware";
 
@@ -52,18 +53,26 @@ export async function listRecipes(req: AuthedRequest, res: Response) {
 }
 
 // GET /api/recipes/:id - public details page
-export async function getRecipeById(req: AuthedRequest, res: Response) {
-  const recipe = await Recipe.findById(req.params.id);
-  if (!recipe) {
-    return res.status(404).json({ success: false, error: "Recipe not found" });
+export async function getRecipeById(req: AuthedRequest, res: Response, next: NextFunction) {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ success: false, error: "Invalid recipe ID" });
   }
 
-  const related = await Recipe.find({
-    _id: { $ne: recipe._id },
-    cuisineType: recipe.cuisineType,
-  }).limit(4);
+  try {
+    const recipe = await Recipe.findById(req.params.id);
+    if (!recipe) {
+      return res.status(404).json({ success: false, error: "Recipe not found" });
+    }
 
-  res.json({ success: true, data: { recipe, related } });
+    const related = await Recipe.find({
+      _id: { $ne: recipe._id },
+      cuisineType: recipe.cuisineType,
+    }).limit(4);
+
+    res.json({ success: true, data: { recipe, related } });
+  } catch (err) {
+    next(err);
+  }
 }
 
 // POST /api/recipes - protected, /items/add
@@ -88,15 +97,23 @@ export async function listMyRecipes(req: AuthedRequest, res: Response) {
 }
 
 // DELETE /api/recipes/:id - protected, /items/manage
-export async function deleteRecipe(req: AuthedRequest, res: Response) {
-  const recipe = await Recipe.findById(req.params.id);
-  if (!recipe) {
-    return res.status(404).json({ success: false, error: "Recipe not found" });
-  }
-  if (recipe.createdBy.toString() !== req.user!.id) {
-    return res.status(403).json({ success: false, error: "Not your recipe" });
+export async function deleteRecipe(req: AuthedRequest, res: Response, next: NextFunction) {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ success: false, error: "Invalid recipe ID" });
   }
 
-  await recipe.deleteOne();
-  res.json({ success: true, data: { deletedId: req.params.id } });
+  try {
+    const recipe = await Recipe.findById(req.params.id);
+    if (!recipe) {
+      return res.status(404).json({ success: false, error: "Recipe not found" });
+    }
+    if (recipe.createdBy.toString() !== req.user!.id) {
+      return res.status(403).json({ success: false, error: "Not your recipe" });
+    }
+
+    await recipe.deleteOne();
+    res.json({ success: true, data: { deletedId: req.params.id } });
+  } catch (err) {
+    next(err);
+  }
 }
