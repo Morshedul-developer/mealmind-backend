@@ -51,7 +51,12 @@ export async function listRecipes(req: AuthedRequest, res: Response) {
     };
   }
   if (minRating) filter.ratingAverage = { $gte: Number(minRating) };
-  if (search) filter.$text = { $search: String(search) };
+  if (search) {
+    // Substring match (not $text, which only matches whole words) so
+    // partial queries like "cl" still match "Classic Beef Ramen".
+    const searchRegex = { $regex: escapeRegex(String(search)), $options: "i" };
+    filter.$or = [{ title: searchRegex }, { shortDescription: searchRegex }];
+  }
 
   const sortMap: Record<string, Record<string, 1 | -1>> = {
     newest: { createdAt: -1 },
