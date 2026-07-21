@@ -17,19 +17,47 @@ const createRecipeSchema = z.object({
   imageUrl: z.string().url().optional(),
 });
 
-// GET /api/recipes - powers the Explore page: search + >=2 filters + sort + pagination
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// GET /api/recipes - powers the Explore page: search + filters + sort + pagination
 export async function listRecipes(req: AuthedRequest, res: Response) {
-  const { search, cuisineType, dietType, sort = "newest", page = "1", limit = "12" } = req.query;
+  const {
+    search,
+    cuisineType,
+    dietType,
+    difficulty,
+    prepTimeMin,
+    prepTimeMax,
+    minRating,
+    sort = "newest",
+    page = "1",
+    limit = "12",
+  } = req.query;
 
   const filter: Record<string, unknown> = {};
-  if (cuisineType) filter.cuisineType = cuisineType;
-  if (dietType) filter.dietType = dietType;
+  // Case-insensitive exact match: seeded/legacy data isn't consistently
+  // cased against the frontend's lowercase cuisineType/dietType values.
+  if (cuisineType) {
+    filter.cuisineType = { $regex: `^${escapeRegex(String(cuisineType))}$`, $options: "i" };
+  }
+  if (dietType) {
+    filter.dietType = { $regex: `^${escapeRegex(String(dietType))}$`, $options: "i" };
+  }
+  if (difficulty) filter.difficulty = difficulty;
+  if (prepTimeMin || prepTimeMax) {
+    filter.prepTimeMinutes = {
+      ...(prepTimeMin ? { $gte: Number(prepTimeMin) } : {}),
+      ...(prepTimeMax ? { $lte: Number(prepTimeMax) } : {}),
+    };
+  }
+  if (minRating) filter.ratingAverage = { $gte: Number(minRating) };
   if (search) filter.$text = { $search: String(search) };
 
   const sortMap: Record<string, Record<string, 1 | -1>> = {
     newest: { createdAt: -1 },
     rating: { ratingAverage: -1 },
     quickest: { prepTimeMinutes: 1 },
+    prepTime: { prepTimeMinutes: 1 },
   };
 
   const pageNum = Math.max(1, parseInt(String(page), 10));

@@ -37,7 +37,7 @@ const recipeSchema = new Schema<IRecipe>(
     },
     imageUrl: {
       type: String,
-      default: "https://placehold.co/600x400?text=Recipe+Image",
+      default: "https://placehold.co/1600x1000?text=Recipe+Image",
     },
     images: { type: [String], default: [] },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
