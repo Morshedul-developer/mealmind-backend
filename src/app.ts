@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { getAuth } from "./config/auth";
+import { trustedOrigins } from "./config/origins";
 import recipeRoutes from "./routes/recipe.routes";
 import aiRoutes from "./routes/ai.routes";
 
@@ -13,9 +14,12 @@ export async function createApp(): Promise<express.Express> {
 
   const app = express();
 
+  // Explicit origin allowlist (never "*") - required alongside
+  // credentials: true so the browser accepts the response on
+  // cross-domain requests (frontend on Vercel, this API on Render).
   app.use(
     cors({
-      origin: process.env.CLIENT_URL,
+      origin: trustedOrigins,
       credentials: true,
     })
   );
