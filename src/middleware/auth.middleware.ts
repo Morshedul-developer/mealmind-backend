@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { auth } from "../config/auth";
+import { getAuth } from "../config/auth";
 
 export interface AuthedRequest extends Request {
   user?: { id: string; email: string; name?: string };
@@ -15,6 +15,7 @@ export async function requireAuth(
   next: NextFunction
 ): Promise<void> {
   try {
+    const auth = await getAuth();
     const session = await auth.api.getSession({ headers: req.headers as any });
 
     if (!session?.user) {

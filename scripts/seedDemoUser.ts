@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { auth } from "../src/config/auth";
+import { getAuth } from "../src/config/auth";
 
 /**
  * Creates the real demo account the frontend's "Try Demo Account" button
@@ -7,6 +7,7 @@ import { auth } from "../src/config/auth";
  */
 async function seedDemoUser() {
   try {
+    const auth = await getAuth();
     await auth.api.signUpEmail({
       body: {
         email: "demo@mealmind.ai",

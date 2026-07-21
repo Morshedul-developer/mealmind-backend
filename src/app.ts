@@ -1,37 +1,44 @@
 import express from "express";
 import cors from "cors";
-import { toNodeHandler } from "better-auth/node";
-import { auth } from "./config/auth";
+import { getAuth } from "./config/auth";
 import recipeRoutes from "./routes/recipe.routes";
 import aiRoutes from "./routes/ai.routes";
 
-const app = express();
+// better-auth/node (toNodeHandler) is ESM-only like the rest of
+// better-auth, so it's loaded via dynamic import() alongside the auth
+// instance itself - see src/config/auth.ts.
+export async function createApp(): Promise<express.Express> {
+  const { toNodeHandler } = await import("better-auth/node");
+  const auth = await getAuth();
 
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL,
-    credentials: true,
-  })
-);
+  const app = express();
 
-// Better Auth handles its own routes under /api/auth/* (sign-in, sign-up,
-// google callback, sign-out, session). Must be mounted BEFORE express.json()
-// per Better Auth's docs, since it parses the body itself.
-app.all("/api/auth/*", toNodeHandler(auth));
+  app.use(
+    cors({
+      origin: process.env.CLIENT_URL,
+      credentials: true,
+    })
+  );
 
-app.use(express.json());
+  // Better Auth handles its own routes under /api/auth/* (sign-in, sign-up,
+  // google callback, sign-out, session). Must be mounted BEFORE express.json()
+  // per Better Auth's docs, since it parses the body itself.
+  app.all("/api/auth/*", toNodeHandler(auth));
 
-app.use("/api/recipes", recipeRoutes);
-app.use("/api/ai", aiRoutes);
+  app.use(express.json());
 
-app.get("/api/health", (_req, res) => {
-  res.json({ success: true, data: { status: "ok" } });
-});
+  app.use("/api/recipes", recipeRoutes);
+  app.use("/api/ai", aiRoutes);
 
-// Basic error handler - keep last
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error(err);
-  res.status(500).json({ success: false, error: "Internal server error" });
-});
+  app.get("/api/health", (_req, res) => {
+    res.json({ success: true, data: { status: "ok" } });
+  });
 
-export default app;
+  // Basic error handler - keep last
+  app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  });
+
+  return app;
+}
