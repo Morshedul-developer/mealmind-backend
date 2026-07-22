@@ -4,6 +4,7 @@ import { getAuth } from "./config/auth";
 import { trustedOrigins } from "./config/origins";
 import recipeRoutes from "./routes/recipe.routes";
 import aiRoutes from "./routes/ai.routes";
+import reviewRoutes from "./routes/review.routes";
 
 // better-auth/node (toNodeHandler) is ESM-only like the rest of
 // better-auth, so it's loaded via dynamic import() alongside the auth
@@ -33,6 +34,7 @@ export async function createApp(): Promise<express.Express> {
 
   app.use("/api/recipes", recipeRoutes);
   app.use("/api/ai", aiRoutes);
+  app.use("/api/reviews", reviewRoutes);
 
   app.get("/api/health", (_req, res) => {
     res.json({ success: true, data: { status: "ok" } });
