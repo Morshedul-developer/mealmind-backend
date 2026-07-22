@@ -5,6 +5,7 @@ import {
   getRecipeById,
   createRecipe,
   listMyRecipes,
+  updateRecipe,
   deleteRecipe,
 } from "../controllers/recipe.controller";
 
@@ -17,6 +18,7 @@ router.get("/:id", getRecipeById);
 
 // Protected
 router.post("/", requireAuth, createRecipe);
+router.put("/:id", requireAuth, updateRecipe);
 router.delete("/:id", requireAuth, deleteRecipe);
 
 export default router;

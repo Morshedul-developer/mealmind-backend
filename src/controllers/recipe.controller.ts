@@ -18,6 +18,8 @@ const createRecipeSchema = z.object({
   imageUrl: z.string().url().optional(),
 });
 
+const updateRecipeSchema = createRecipeSchema.partial();
+
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // GET /api/recipes - powers the Explore page: search + filters + sort + pagination
@@ -132,6 +134,35 @@ export async function createRecipe(req: AuthedRequest, res: Response) {
   });
 
   res.status(201).json({ success: true, data: recipe });
+}
+
+// PUT /api/recipes/:id - protected, /items/manage
+export async function updateRecipe(req: AuthedRequest, res: Response, next: NextFunction) {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ success: false, error: "Invalid recipe ID" });
+  }
+
+  const parsed = updateRecipeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ success: false, error: parsed.error.flatten() });
+  }
+
+  try {
+    const recipe = await Recipe.findById(req.params.id);
+    if (!recipe) {
+      return res.status(404).json({ success: false, error: "Recipe not found" });
+    }
+    if (recipe.createdBy.toString() !== req.user!.id) {
+      return res.status(403).json({ success: false, error: "Not your recipe" });
+    }
+
+    Object.assign(recipe, parsed.data);
+    await recipe.save();
+
+    res.json({ success: true, data: recipe });
+  } catch (err) {
+    next(err);
+  }
 }
 
 // GET /api/recipes/mine - protected, /items/manage
