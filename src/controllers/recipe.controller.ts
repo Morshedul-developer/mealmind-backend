@@ -2,6 +2,7 @@ import { Response, NextFunction } from "express";
 import { z } from "zod";
 import mongoose from "mongoose";
 import { Recipe } from "../models/Recipe";
+import { Review } from "../models/Review";
 import { AuthedRequest } from "../middleware/auth.middleware";
 
 const createRecipeSchema = z.object({
@@ -102,7 +103,17 @@ export async function getRecipeById(req: AuthedRequest, res: Response, next: Nex
       cuisineType: recipe.cuisineType,
     }).limit(4);
 
-    res.json({ success: true, data: { recipe, related } });
+    const counted = await Review.aggregate<{ _id: number; count: number }>([
+      { $match: { recipeId: recipe._id } },
+      { $group: { _id: "$rating", count: { $sum: 1 } } },
+    ]);
+    const countByRating = new Map(counted.map((entry) => [entry._id, entry.count]));
+    const ratingBreakdown = [5, 4, 3, 2, 1].map((rating) => ({
+      rating,
+      count: countByRating.get(rating) ?? 0,
+    }));
+
+    res.json({ success: true, data: { recipe, related, ratingBreakdown } });
   } catch (err) {
     next(err);
   }
